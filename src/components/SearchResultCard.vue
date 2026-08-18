@@ -76,8 +76,15 @@ function formatTimestamp(seconds) {
           >
             {{ formatTimestamp(match.seek_seconds) }}
           </span>
-          <p class="font-body-md text-body-md text-on-surface text-sm line-clamp-2">
-            "...{{ match.text }}..."
+          <p
+            class="font-body-md text-body-md text-on-surface text-sm line-clamp-2 [&>mark]:bg-primary-container [&>mark]:text-on-primary-container [&>mark]:px-0.5 [&>mark]:rounded"
+          >
+            <template v-if="match.highlighted_text">
+              <span>&quot;...</span>
+              <span v-html="match.highlighted_text" />
+              <span>...&quot;</span>
+            </template>
+            <template v-else>&quot;...{{ match.text }}...&quot;</template>
           </p>
         </div>
       </div>

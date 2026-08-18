@@ -508,7 +508,8 @@ onUnmounted(() => {
                   index === activeMatchIndex ? 'text-on-surface' : 'text-on-surface-variant group-hover:text-on-surface'
                 ]"
               >
-                "{{ match.text }}"
+                <span v-if="match.highlighted_text" v-html="`&quot;${match.highlighted_text}&quot;`" />
+                <template v-else>"{{ match.text }}"</template>
               </p>
             </div>
 
