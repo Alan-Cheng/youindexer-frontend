@@ -11,6 +11,7 @@ import { useRoute, useRouter } from 'vue-router'
 import TopNavBar from '@/components/TopNavBar.vue'
 import PlatformSideNav from '@/components/PlatformSideNav.vue'
 import SearchResultCard from '@/components/SearchResultCard.vue'
+import SearchResultSkeletonCard from '@/components/SearchResultSkeletonCard.vue'
 import { createKeywordSearchJob, streamKeywordSearchJobEvents } from '@/api/youtube.js'
 
 const route = useRoute()
@@ -42,16 +43,24 @@ const videoList = computed(() => {
 })
 
 const progressText = computed(() => {
-  if (!job.value) return '準備搜尋...'
+  if (!job.value) return ''
   const { status, completed_count, video_count, matched_count } = job.value
   if (status === 'completed') {
-    return `已完成，${matched_count} 部影片找到提及`
+    return `搜尋完成，可能提及您搜尋內容的影片有 ${matched_count} 部`
   }
   if (status === 'failed') {
     return '搜尋失敗'
   }
   return `處理中 ${completed_count || 0} / ${video_count || 0} 部影片...`
 })
+
+const showSkeletons = computed(() => {
+  if (error.value) return false
+  if (!job.value) return true
+  return job.value.status === 'processing' && videoList.value.length === 0
+})
+
+const skeletonCount = computed(() => job.value?.video_count || 6)
 
 function goToVideo(videoId) {
   if (!job.value?.task_id || !videoId) return
@@ -124,7 +133,7 @@ watch(() => route.query.q, startSearch)
             >
               「{{ query || '...' }}」的搜尋結果
             </h1>
-            <p class="font-body-md text-body-md text-on-surface-variant">
+            <p v-if="progressText" class="font-body-md text-body-md text-on-surface-variant">
               {{ progressText }}
             </p>
           </div>
@@ -159,14 +168,20 @@ watch(() => route.query.q, startSearch)
 
           <!-- Bento Grid -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter items-start">
-            <SearchResultCard
-              v-for="video in videoList"
-              :key="video.metadata.video_id"
-              :video="video"
-              :status="video.status"
-              @click="goToVideo"
-            />
+            <template v-if="showSkeletons">
+              <SearchResultSkeletonCard v-for="n in skeletonCount" :key="`skeleton-${n}`" />
+            </template>
+            <template v-else>
+              <SearchResultCard
+                v-for="video in videoList"
+                :key="video.metadata.video_id"
+                :video="video"
+                :status="video.status"
+                @click="goToVideo"
+              />
+            </template>
           </div>
+          <p v-if="showSkeletons" class="sr-only" role="status">搜尋載入中</p>
 
           <!-- Empty state -->
           <div

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue'
+import logoUrl from '../assets/logo.png'
 
 const props = defineProps({
   showSearch: {
@@ -53,7 +54,9 @@ function handleSearchSubmit() {
       class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-16"
     >
       <div class="flex items-center gap-4 md:gap-6">
-        <div class="font-title-lg text-title-lg font-bold text-google-blue">YouIndexer</div>
+        <router-link to="/" class="flex items-center" aria-label="回到首頁">
+          <img :src="logoUrl" alt="YouIndexer" class="h-9 w-auto object-contain" />
+        </router-link>
         <nav class="hidden md:flex gap-6">
           <a
             v-for="item in navItems"
