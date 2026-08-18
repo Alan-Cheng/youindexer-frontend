@@ -53,7 +53,7 @@ function handleSearchSubmit() {
       class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-16"
     >
       <div class="flex items-center gap-4 md:gap-6">
-        <div class="font-title-lg text-title-lg font-bold text-google-blue">SocialIntel</div>
+        <div class="font-title-lg text-title-lg font-bold text-google-blue">YouIndexer</div>
         <nav class="hidden md:flex gap-6">
           <a
             v-for="item in navItems"

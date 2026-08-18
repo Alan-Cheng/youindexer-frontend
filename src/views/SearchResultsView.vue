@@ -182,7 +182,7 @@ watch(() => route.query.q, startSearch)
         <footer
           class="mt-16 border-t border-outline-variant py-stack-md flex flex-col sm:flex-row justify-between items-center max-w-[1024px] mx-auto text-on-surface-variant font-label-sm text-label-sm px-margin-mobile md:px-0"
         >
-          <p>© 2024 SocialIntel. 保留所有權利。</p>
+          <p>© 2026 YouIndexer. 保留所有權利。</p>
           <div class="flex gap-4 mt-4 sm:mt-0">
             <a class="hover:text-primary transition-colors opacity-100 hover:opacity-80" href="#">隱私權</a>
             <a class="hover:text-primary transition-colors opacity-100 hover:opacity-80" href="#">條款</a>

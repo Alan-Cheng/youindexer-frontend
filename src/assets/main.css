@@ -47,4 +47,12 @@
     background-color: #c1c6d6;
     border-radius: 20px;
   }
+
+  .transcript-highlight {
+    background: #fef08a;
+    color: #000;
+    border-radius: 3px;
+    padding: 0 2px;
+    box-shadow: 0 0 8px 3px rgba(254, 240, 138, 0.7);
+  }
 }

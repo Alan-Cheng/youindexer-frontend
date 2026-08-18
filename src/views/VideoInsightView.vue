@@ -21,6 +21,7 @@ const activeGroupIndex = ref(-1)
 const activeTab = ref('insights')
 const currentSeekSeconds = ref(0)
 const followEnabled = ref(false)
+const transcriptSearchQuery = ref('')
 
 const player = ref(null)
 const playerReady = ref(false)
@@ -235,6 +236,19 @@ function toggleFollow() {
     scrollToActiveGroup()
   }
 }
+
+function highlightText(text, query) {
+  if (!query || !text) return text
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
+  return text.replace(regex, '<mark class="transcript-highlight">$1</mark>')
+}
+
+const filteredGroups = computed(() => {
+  if (!transcriptSearchQuery.value.trim()) return groupedSegments.value
+  const q = transcriptSearchQuery.value.toLowerCase()
+  return groupedSegments.value.filter((g) => g.text.toLowerCase().includes(q))
+})
 
 function handleTranscriptScroll() {
   if (followEnabled.value) {
@@ -510,6 +524,7 @@ onUnmounted(() => {
               <div class="flex items-center bg-surface-container-low rounded-lg px-3 py-2 border border-outline-variant/50 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all">
                 <span class="material-symbols-outlined text-on-surface-variant text-[20px] mr-2">search</span>
                 <input
+                  v-model="transcriptSearchQuery"
                   type="text"
                   class="bg-transparent border-none outline-none text-on-surface font-body-md w-full placeholder:text-on-surface-variant focus:ring-0 p-0 text-sm"
                   placeholder="搜尋台詞..."
@@ -519,7 +534,7 @@ onUnmounted(() => {
 
             <!-- Grouped Transcript Paragraphs -->
             <div
-              v-for="(group, index) in groupedSegments"
+              v-for="(group, index) in filteredGroups"
               :key="`group-${index}`"
               ref="groupRefs"
               :class="[
@@ -533,13 +548,16 @@ onUnmounted(() => {
               <span class="text-google-blue font-label-lg text-label-lg shrink-0 mt-0.5 group-hover:underline">
                 {{ formatTimestamp(group.start_ms / 1000) }}
               </span>
-              <p class="text-on-surface font-body-md text-body-md leading-relaxed">
-                {{ group.text }}
-              </p>
+              <p
+                class="text-on-surface font-body-md text-body-md leading-relaxed"
+                v-html="highlightText(group.text, transcriptSearchQuery)"
+              />
             </div>
 
-            <div v-if="!loading && groupedSegments.length === 0" class="text-center py-stack-lg">
-              <p class="font-body-md text-body-md text-on-surface-variant">此影片尚未有完整台詞資料。</p>
+            <div v-if="!loading && filteredGroups.length === 0" class="text-center py-stack-lg">
+              <p class="font-body-md text-body-md text-on-surface-variant">
+                {{ transcriptSearchQuery ? '找不到符合的台詞' : '此影片尚未有完整台詞資料' }}
+              </p>
             </div>
           </template>
         </div>
