@@ -11,6 +11,7 @@ async function _handleResponse(response) {
     }
     throw new Error(detail)
   }
+  if (response.status === 204) return null
   return response.json()
 }
 
@@ -72,6 +73,19 @@ export async function fetchMe(accessToken) {
 export async function fetchSearchHistory(accessToken, { limit = 20, offset = 0 } = {}) {
   const params = new URLSearchParams({ limit: String(limit), offset: String(offset) })
   const response = await fetch(`${API_BASE}/me/search-history?${params}`, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  })
+  return _handleResponse(response)
+}
+
+/**
+ * Delete one search-history item belonging to the authenticated user.
+ * @param {string} accessToken
+ * @param {string} taskId
+ */
+export async function deleteSearchHistoryItem(accessToken, taskId) {
+  const response = await fetch(`${API_BASE}/me/search-history/${encodeURIComponent(taskId)}`, {
+    method: 'DELETE',
     headers: { Authorization: `Bearer ${accessToken}` }
   })
   return _handleResponse(response)

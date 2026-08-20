@@ -2,7 +2,11 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { fetchSearchHistory, streamSearchHistoryEvents } from '@/api/auth.js'
+import {
+  deleteSearchHistoryItem,
+  fetchSearchHistory,
+  streamSearchHistoryEvents
+} from '@/api/auth.js'
 import { currentUser, ensureValidAccessToken, isLoggedIn } from '@/stores/auth.js'
 
 const router = useRouter()
@@ -11,6 +15,8 @@ const history = ref([])
 const loading = ref(false)
 const error = ref('')
 const cleanupHistorySSE = ref(null)
+const openMenuTaskId = ref(null)
+const deletingTaskId = ref(null)
 
 const displayName = computed(() => currentUser.value?.display_name || currentUser.value?.email || '')
 
@@ -56,6 +62,30 @@ function goToResult(taskId) {
       name: 'home',
       query: { task_id: item.task_id, q: item.query }
     })
+  }
+}
+
+function toggleMenu(taskId) {
+  openMenuTaskId.value = openMenuTaskId.value === taskId ? null : taskId
+}
+
+async function deleteResult(item) {
+  if (!window.confirm(`確定要刪除「${item.query}」的搜尋結果嗎？`)) return
+
+  deletingTaskId.value = item.task_id
+  error.value = ''
+  try {
+    const token = await ensureValidAccessToken()
+    await deleteSearchHistoryItem(token, item.task_id)
+    history.value = history.value.filter((entry) => entry.task_id !== item.task_id)
+    openMenuTaskId.value = null
+    if (router.currentRoute.value.query.task_id === item.task_id) {
+      await router.push({ name: 'home' })
+    }
+  } catch (err) {
+    error.value = err.message || '無法刪除搜尋紀錄'
+  } finally {
+    deletingTaskId.value = null
   }
 }
 
@@ -147,16 +177,26 @@ onUnmounted(() => {
         </div>
 
         <nav v-if="history.length" class="flex-1 flex flex-col gap-1 overflow-y-auto">
-          <a
+          <div
             v-for="item in history"
             :key="item.task_id"
-            href="#"
-            class="flex flex-col gap-1 rounded-[20px] px-4 py-3 mx-2 text-on-surface hover:bg-surface-container-high transition-all scale-95 active:scale-100 transition-transform font-body-md text-body-md"
-            @click.prevent="goToResult(item.task_id)"
+            class="relative flex flex-col gap-1 rounded-[20px] px-4 py-3 mx-2 text-on-surface hover:bg-surface-container-high transition-all scale-95 active:scale-100 transition-transform font-body-md text-body-md cursor-pointer"
+            role="button"
+            tabindex="0"
+            @click="goToResult(item.task_id)"
+            @keydown.enter="goToResult(item.task_id)"
           >
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-on-surface-variant">search</span>
-              <span class="truncate font-medium">{{ item.query }}</span>
+              <span class="truncate font-medium pr-5">{{ item.query }}</span>
+              <button
+                type="button"
+                :aria-label="`開啟 ${item.query} 選單`"
+                class="absolute top-3 right-3 rounded-full p-1 text-on-surface-variant hover:bg-surface-container-highest hover:text-on-surface"
+                @click.stop="toggleMenu(item.task_id)"
+              >
+                <span class="material-symbols-outlined text-[20px]">more_vert</span>
+              </button>
             </div>
             <div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
               <span
@@ -167,7 +207,22 @@ onUnmounted(() => {
               </span>
               <span>{{ formatDate(item.created_at) }}</span>
             </div>
-          </a>
+            <div
+              v-if="openMenuTaskId === item.task_id"
+              class="absolute right-3 top-10 z-50 min-w-28 rounded-xl border border-outline-variant bg-surface-container-lowest py-1 shadow-lg"
+              @click.stop
+            >
+              <button
+                type="button"
+                class="flex w-full items-center gap-2 px-3 py-2 text-left font-body-md text-body-md text-error hover:bg-error-container disabled:opacity-50"
+                :disabled="deletingTaskId === item.task_id"
+                @click="deleteResult(item)"
+              >
+                <span class="material-symbols-outlined text-[18px]">delete</span>
+                {{ deletingTaskId === item.task_id ? '刪除中...' : '刪除' }}
+              </button>
+            </div>
+          </div>
         </nav>
 
         <div v-else-if="!error" class="px-6 py-4 text-on-surface-variant font-body-md text-body-md">
