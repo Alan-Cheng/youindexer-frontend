@@ -1,4 +1,6 @@
 <script setup>
+import ThinkingOrb from '@/components/ThinkingOrb.vue'
+
 defineProps({
   video: {
     type: Object,
@@ -11,6 +13,7 @@ defineProps({
 })
 
 const emit = defineEmits(['click'])
+const orbSpeed = 0.3 + Math.random() * 0.3
 
 function formatTimestamp(seconds) {
   const total = Math.floor(seconds)
@@ -44,7 +47,7 @@ function formatTimestamp(seconds) {
         v-if="status === 'loading'"
         class="absolute inset-0 bg-surface/70 flex items-center justify-center"
       >
-        <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+        <ThinkingOrb :speed="orbSpeed" />
       </div>
     </div>
 
