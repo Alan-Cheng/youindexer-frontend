@@ -4,7 +4,11 @@
     aria-hidden="true"
   >
     <!-- Thumbnail placeholder -->
-    <div class="w-full h-40 shrink-0 bg-surface-container-high" />
+    <div class="relative w-full h-40 shrink-0 bg-surface-container-high">
+      <div class="absolute inset-0 bg-surface/70 flex items-center justify-center">
+        <ThinkingOrb state="shaping" :size="64" />
+      </div>
+    </div>
 
     <!-- Content placeholder -->
     <div class="p-4 flex flex-col flex-grow">
@@ -20,3 +24,7 @@
     </div>
   </article>
 </template>
+
+<script setup>
+import ThinkingOrb from '@/components/ThinkingOrb.vue'
+</script>
