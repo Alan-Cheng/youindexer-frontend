@@ -76,6 +76,15 @@ async function loadTask() {
     const initial = id
       ? await getKeywordSearchJob(id)
       : await createKeywordSearchJob(keyword, 'zh-TW', 5)
+
+    if (!id) {
+      await router.replace({
+        name: 'search-results',
+        query: { q: keyword, task_id: initial.task_id }
+      })
+      return
+    }
+
     job.value = initial
     isCreating.value = false
     subscribeToJob(initial.task_id)
