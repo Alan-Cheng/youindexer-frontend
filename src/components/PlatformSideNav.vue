@@ -1,73 +1,180 @@
 <script setup>
-const platforms = [
-  { id: 'youtube', label: 'YouTube', icon: 'subscriptions', active: true },
-  { id: 'threads', label: 'Threads', icon: 'chat', active: false, disabled: true },
-  { id: 'instagram', label: 'Instagram', icon: 'camera_alt', active: false, disabled: true }
-]
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const bottomLinks = [
-  { id: 'archive', label: '封存', icon: 'archive' },
-  { id: 'trash', label: '垃圾桶', icon: 'delete' }
-]
+import { fetchSearchHistory, streamSearchHistoryEvents } from '@/api/auth.js'
+import { currentUser, ensureValidAccessToken, isLoggedIn } from '@/stores/auth.js'
 
-const emit = defineEmits(['select'])
+const router = useRouter()
+
+const history = ref([])
+const loading = ref(false)
+const error = ref('')
+const cleanupHistorySSE = ref(null)
+
+const displayName = computed(() => currentUser.value?.display_name || currentUser.value?.email || '')
+
+async function loadHistory() {
+  if (!isLoggedIn.value) return
+  cleanupHistorySSE.value?.()
+  cleanupHistorySSE.value = null
+  loading.value = true
+  error.value = ''
+  try {
+    const token = await ensureValidAccessToken()
+    const initial = await fetchSearchHistory(token, { limit: 20, offset: 0 })
+    history.value = initial.items || []
+    loading.value = false
+    cleanupHistorySSE.value = streamSearchHistoryEvents(token, {
+      onSnapshot: (data) => {
+        history.value = data.items || []
+        loading.value = false
+      },
+      onUpdate: (data) => {
+        history.value = data.items || []
+        loading.value = false
+      },
+      onError: (detail) => {
+        error.value = detail || '歷史紀錄即時更新中斷'
+        loading.value = false
+      }
+    })
+  } catch (err) {
+    error.value = err.message || '無法載入歷史紀錄'
+    loading.value = false
+  }
+}
+
+function goToLogin() {
+  router.push({ name: 'login' })
+}
+
+function goToResult(taskId) {
+  const item = history.value.find((h) => h.task_id === taskId)
+  if (item) {
+    router.push({
+      name: 'home',
+      query: { task_id: item.task_id, q: item.query }
+    })
+  }
+}
+
+function formatDate(iso) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  return date.toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function statusLabel(status) {
+  return {
+    processing: '處理中',
+    completed: '已完成',
+    failed: '失敗'
+  }[status] || status
+}
+
+function statusClass(status) {
+  return {
+    processing: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+    completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
+    failed: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
+  }[status] || 'bg-surface-container-high text-on-surface-variant'
+}
+
+onMounted(loadHistory)
+
+onUnmounted(() => {
+  cleanupHistorySSE.value?.()
+  cleanupHistorySSE.value = null
+})
 </script>
 
 <template>
   <aside
-    class="bg-surface-container-low dark:bg-inverse-surface h-full w-64 border-r border-outline-variant shrink-0 hidden md:flex flex-col z-40"
+    class="bg-surface-container-low dark:bg-inverse-surface h-full min-h-0 max-h-full overflow-y-auto w-64 border-r border-outline-variant shrink-0 hidden md:flex flex-col z-40"
   >
-    <div class="flex flex-col gap-unit py-stack-md w-64 h-full">
-      <div class="px-6 mb-4">
-        <h2 class="font-title-md text-title-md font-semibold text-on-surface">平台</h2>
-        <p class="font-body-md text-body-md text-on-surface-variant mt-1">篩選視圖</p>
+    <div class="flex flex-col gap-unit py-stack-md w-64 min-h-full">
+      <div class="px-6 mb-2">
+        <h2 class="font-title-md text-title-md font-semibold text-on-surface">歷史紀錄</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant mt-1">
+          您最近建立的搜尋任務
+        </p>
       </div>
 
-      <nav class="flex-1 flex flex-col gap-1">
-        <a
-          v-for="platform in platforms"
-          :key="platform.id"
-          href="#"
-          :class="[
-            'flex items-center gap-3 rounded-full px-4 py-3 mx-2 scale-95 active:scale-100 transition-transform font-label-lg text-label-lg',
-            platform.active
-              ? 'bg-secondary-container text-on-secondary-container'
-              : 'text-on-surface-variant hover:bg-surface-container-high hover:bg-surface-container-highest transition-all',
-            platform.disabled && 'opacity-50 pointer-events-none'
-          ]"
-          @click.prevent="emit('select', platform.id)"
-        >
-          <span
-            class="material-symbols-outlined"
-            :style="{ fontVariationSettings: platform.active ? '\'FILL\' 1' : '\'FILL\' 0' }"
-          >
-            {{ platform.icon }}
-          </span>
-          {{ platform.label }}
-        </a>
-      </nav>
-
-      <div class="px-6 py-4">
+      <!-- Anonymous state -->
+      <div
+        v-if="!isLoggedIn"
+        class="mx-6 p-5 rounded-3xl bg-surface-container text-on-surface-variant text-center"
+      >
+        <span class="material-symbols-outlined text-4xl mb-2">history</span>
+        <p class="font-body-md text-body-md">
+          登入後可查看歷史紀錄
+        </p>
         <button
           type="button"
-          class="w-full flex justify-center items-center gap-2 border border-outline text-primary font-label-lg text-label-lg px-4 py-2 rounded-full hover:bg-surface-container-low transition-colors"
+          class="mt-4 w-full flex justify-center items-center gap-2 bg-primary text-on-primary font-label-lg text-label-lg px-4 py-2 rounded-full hover:opacity-90 transition-opacity"
+          @click="goToLogin"
         >
-          <span class="material-symbols-outlined text-lg">add</span>
-          新增平台
+          登入
         </button>
       </div>
 
-      <div class="mt-auto border-t border-outline-variant pt-4 flex flex-col gap-1">
-        <a
-          v-for="link in bottomLinks"
-          :key="link.id"
-          href="#"
-          class="flex items-center gap-3 text-on-surface-variant hover:bg-surface-container-high rounded-full px-4 py-3 mx-2 hover:bg-surface-container-highest transition-all scale-95 active:scale-100 transition-transform font-label-lg text-label-lg"
+      <!-- Authenticated state -->
+      <template v-else>
+        <div class="px-6 mb-2">
+          <div class="flex items-center gap-2 text-on-surface font-body-md text-body-md">
+            <span class="material-symbols-outlined">account_circle</span>
+            <span class="truncate">{{ displayName }}</span>
+          </div>
+        </div>
+
+        <div v-if="loading" class="px-6 py-4 text-on-surface-variant font-body-md text-body-md">
+          載入中...
+        </div>
+
+        <div
+          v-else-if="error && !history.length"
+          class="mx-6 p-4 rounded-2xl bg-error-container text-on-error-container font-body-md text-body-md"
         >
-          <span class="material-symbols-outlined">{{ link.icon }}</span>
-          {{ link.label }}
-        </a>
-      </div>
+          {{ error }}
+        </div>
+
+        <div
+          v-if="error && history.length"
+          class="mx-6 mb-2 px-3 py-2 rounded-xl bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200 font-body-sm text-body-sm"
+        >
+          歷史紀錄即時更新中斷，已顯示最近資料
+        </div>
+
+        <nav v-if="history.length" class="flex-1 flex flex-col gap-1 overflow-y-auto">
+          <a
+            v-for="item in history"
+            :key="item.task_id"
+            href="#"
+            class="flex flex-col gap-1 rounded-[20px] px-4 py-3 mx-2 text-on-surface hover:bg-surface-container-high transition-all scale-95 active:scale-100 transition-transform font-body-md text-body-md"
+            @click.prevent="goToResult(item.task_id)"
+          >
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-on-surface-variant">search</span>
+              <span class="truncate font-medium">{{ item.query }}</span>
+            </div>
+            <div class="flex items-center justify-between text-on-surface-variant font-body-sm text-body-sm">
+              <span
+                class="inline-flex items-center rounded-full px-2.5 py-1 font-label-sm text-label-sm font-medium"
+                :class="statusClass(item.status)"
+              >
+                {{ statusLabel(item.status) }}
+              </span>
+              <span>{{ formatDate(item.created_at) }}</span>
+            </div>
+          </a>
+        </nav>
+
+        <div v-else-if="!error" class="px-6 py-4 text-on-surface-variant font-body-md text-body-md">
+          尚無搜尋紀錄
+        </div>
+      </template>
+
     </div>
   </aside>
 </template>

@@ -179,7 +179,10 @@ function formatTimestamp(seconds) {
 }
 
 function goBack() {
-  router.push({ name: 'search-results', query: { q: query.value } })
+  router.push({
+    name: 'home',
+    query: { task_id: taskId.value, q: query.value }
+  })
 }
 
 function handleHeaderSearch(newQuery) {

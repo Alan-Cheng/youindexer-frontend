@@ -1,8 +1,7 @@
+import { ensureValidAccessToken, logout } from '@/stores/auth.js'
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
-/**
- * @param {Response} response
- */
 async function _handleResponse(response) {
   if (!response.ok) {
     let detail = `HTTP ${response.status}`
@@ -17,6 +16,25 @@ async function _handleResponse(response) {
   return response.json()
 }
 
+async function authFetch(url, options = {}) {
+  const token = await ensureValidAccessToken()
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...options.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  })
+
+  if (response.status === 401) {
+    logout()
+    window.location.href = '/login'
+    throw new Error('登入階段已過期，請重新登入')
+  }
+
+  return _handleResponse(response)
+}
+
 /**
  * Create a durable YouTube keyword search job.
  * @param {string} query
@@ -28,7 +46,7 @@ export async function createKeywordSearchJob(
   locale = 'zh-TW',
   matchesPerVideo = 5
 ) {
-  const response = await fetch(`${API_BASE}/youtube/search-jobs`, {
+  return authFetch(`${API_BASE}/youtube/search-jobs`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -37,7 +55,6 @@ export async function createKeywordSearchJob(
       matches_per_video: matchesPerVideo
     })
   })
-  return _handleResponse(response)
 }
 
 /**
@@ -45,8 +62,7 @@ export async function createKeywordSearchJob(
  * @param {string} taskId
  */
 export async function getKeywordSearchJob(taskId) {
-  const response = await fetch(`${API_BASE}/youtube/search-jobs/${taskId}`)
-  return _handleResponse(response)
+  return authFetch(`${API_BASE}/youtube/search-jobs/${taskId}`)
 }
 
 /**
@@ -170,6 +186,5 @@ export async function searchSubtitles(query, language = null, limit = 20) {
   if (language) {
     params.set('language', language)
   }
-  const response = await fetch(`${API_BASE}/youtube/subtitles/search?${params}`)
-  return _handleResponse(response)
+  return authFetch(`${API_BASE}/youtube/subtitles/search?${params}`)
 }

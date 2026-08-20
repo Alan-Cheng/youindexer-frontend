@@ -1,11 +1,16 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
+import { initAuth } from './stores/auth.js'
 
 import './assets/main.css'
 
-const app = createApp(App)
+async function bootstrap() {
+  await initAuth()
 
-app.use(router)
+  const app = createApp(App)
+  app.use(router)
+  app.mount('#app')
+}
 
-app.mount('#app')
+bootstrap()
