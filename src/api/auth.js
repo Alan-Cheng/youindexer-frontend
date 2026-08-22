@@ -1,18 +1,9 @@
+import { getApiErrorMessage, handleApiResponse } from '@/api/response.js'
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
 async function _handleResponse(response) {
-  if (!response.ok) {
-    let detail = `HTTP ${response.status}`
-    try {
-      const body = await response.json()
-      detail = body.detail || JSON.stringify(body)
-    } catch {
-      // ignore
-    }
-    throw new Error(detail)
-  }
-  if (response.status === 204) return null
-  return response.json()
+  return handleApiResponse(response)
 }
 
 /**
@@ -134,7 +125,13 @@ export function streamSearchHistoryEvents(accessToken, callbacks, { limit = 20, 
         signal: controller.signal
       })
       if (!response.ok) {
-        throw new Error(`歷史紀錄串流連線失敗（HTTP ${response.status}）`)
+        let body = null
+        try {
+          body = await response.json()
+        } catch {
+          // Fall back to the HTTP status when the response is not JSON.
+        }
+        throw new Error(getApiErrorMessage(body, response.status))
       }
       if (!response.body) throw new Error('瀏覽器不支援 SSE response stream')
 

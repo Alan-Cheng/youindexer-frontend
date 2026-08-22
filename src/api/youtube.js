@@ -1,19 +1,10 @@
 import { ensureValidAccessToken, logout } from '@/stores/auth.js'
+import { handleApiResponse } from '@/api/response.js'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
 async function _handleResponse(response) {
-  if (!response.ok) {
-    let detail = `HTTP ${response.status}`
-    try {
-      const body = await response.json()
-      detail = body.detail || JSON.stringify(body)
-    } catch {
-      // ignore
-    }
-    throw new Error(detail)
-  }
-  return response.json()
+  return handleApiResponse(response)
 }
 
 async function authFetch(url, options = {}) {

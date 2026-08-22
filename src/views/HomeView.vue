@@ -45,11 +45,11 @@ function handleTagSelect(label) {
     <div class="flex flex-1 min-h-0 overflow-hidden">
       <PlatformSideNav v-if="isLoggedIn" />
 
-      <main class="flex-1 min-h-0 overflow-y-auto bg-surface">
+      <main class="flex flex-col flex-1 min-h-0 overflow-y-auto bg-surface">
         <SearchTaskResults v-if="selectedTaskId" />
         <div
           v-else
-          class="min-h-full flex flex-col items-center justify-center px-margin-mobile md:px-margin-desktop py-12 md:py-24 max-w-[1280px] mx-auto w-full"
+          class="flex-1 flex flex-col items-center justify-center px-margin-mobile md:px-margin-desktop py-12 md:py-24 max-w-[1280px] mx-auto w-full"
         >
           <LogoHero />
           <div class="w-full max-w-[680px] mb-stack-md">
